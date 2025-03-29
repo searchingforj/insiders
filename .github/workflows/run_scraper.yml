@@ -1,0 +1,19 @@
+name: SEC Scraper
+on:
+  schedule:
+    - cron: '*/10 6-22 * * 1-5'  # Every 10 minutes, 6AM-10PM EST Mon-Fri
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - run: python sec_scraper.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
