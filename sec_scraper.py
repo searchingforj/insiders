@@ -6,7 +6,7 @@ import re
 from datetime import datetime, time
 import pytz
 
-# Initialize Supabase client using GitHub secrets
+# Initialize Supabase client
 SUPABASE_URL = os.environ['SUPABASE_URL']
 SUPABASE_KEY = os.environ['SUPABASE_KEY']
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -19,8 +19,13 @@ SEC_HEADERS = {
     "Host": "www.sec.gov"
 }
 
+# TESTING MODE - set to False for production
+TESTING_MODE = True  # <<< Change to False when done testing
+
 def is_sec_business_hours():
-    """Check if current time is within SEC EDGAR operating hours (6AM-10PM EST, weekdays)"""
+    """Check if current time is within SEC EDGAR operating hours"""
+    if TESTING_MODE:
+        return True  # Always run in testing mode
     est = pytz.timezone('US/Eastern')
     now = datetime.now(est)
     if now.weekday() >= 5:  # Saturday(5) or Sunday(6)
@@ -32,15 +37,23 @@ def fetch_and_process_filings():
         print("Outside SEC operating hours - skipping check")
         return
 
-    print("Checking for new filings...")
+    print(f"{'[TESTING MODE] ' if TESTING_MODE else ''}Checking for new filings...")
     
     try:
         response = requests.get(SEC_RSS_URL, headers=SEC_HEADERS, timeout=10)
         response.raise_for_status()
         root = ET.fromstring(response.content)
         
-        for entry in root.findall('{http://www.w3.org/2005/Atom}entry'):
-            process_filing(entry)
+        # Count total filings found
+        filings = list(root.findall('{http://www.w3.org/2005/Atom}entry'))
+        print(f"Found {len(filings)} filings to process")
+        
+        j_code_count = 0
+        for entry in filings:
+            if process_filing(entry):
+                j_code_count += 1
+                
+        print(f"Processing complete. Found {j_code_count} J-code filings")
             
     except requests.RequestException as e:
         print(f"Error fetching filings: {e}")
@@ -49,6 +62,7 @@ def process_filing(entry):
     filing_url = entry.find('{http://www.w3.org/2005/Atom}link').attrib['href']
     
     try:
+        print(f"Processing filing: {filing_url}")
         filing_response = requests.get(filing_url, headers=SEC_HEADERS, timeout=10)
         filing_response.raise_for_status()
         filing_text = filing_response.text
@@ -68,9 +82,12 @@ def process_filing(entry):
             
             # Upsert to avoid duplicates
             supabase.table('j_code_filings').upsert(filing_data).execute()
+            print(f"Found J-code filing: {company_name} ({ticker})")
+            return True
             
     except requests.RequestException as e:
         print(f"Error processing filing {filing_url}: {e}")
+    return False
 
 if __name__ == '__main__':
     fetch_and_process_filings()
