@@ -5,24 +5,44 @@ from supabase import create_client
 import re
 from datetime import datetime
 
-# Initialize Supabase
-supabase = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
-
-def extract_xml_data(xml_content):
-    """Extracts precise data from XML with error handling"""
+def extract_xml_data(filing_text):
+    """Advanced XML parser with SEC-specific handling"""
     try:
-        root = ET.fromstring(xml_content)
+        # Isolate the XML section (handles malformed wrappers)
+        xml_start = filing_text.find('<ownershipDocument>')
+        xml_end = filing_text.find('</ownershipDocument>')
+        
+        if xml_start == -1 or xml_end == -1:
+            return None
+            
+        xml_content = filing_text[xml_start:xml_end+18]  # +18 for tag length
+        
+        # Fix common XML issues
+        xml_content = re.sub(r'<\?xml[^>]+\?>', '', xml_content)  # Remove duplicate declarations
+        xml_content = re.sub(r'&(?!#?[a-z0-9]+;)', '&amp;', xml_content)  # Fix unescaped ampersands
+        
+        # Parse with explicit encoding
+        root = ET.fromstring(xml_content.encode('utf-8'))
+        
+        # XPath helper with null checks
+        def xpath_text(path):
+            node = root.find(path)
+            return node.text if node is not None else None
+            
         return {
-            'issuer_name': root.find('.//issuerName').text if root.find('.//issuerName') is not None else None,
-            'ticker': root.find('.//issuerTradingSymbol').text if root.find('.//issuerTradingSymbol') is not None else None,
-            'period_of_report': root.find('.//periodOfReport').text if root.find('.//periodOfReport') is not None else None,
-            'transaction_date': root.find('.//transactionDate/value').text if root.find('.//transactionDate/value') is not None else None
+            'issuer_name': xpath_text('.//issuerName'),
+            'ticker': xpath_text('.//issuerTradingSymbol'),
+            'period_of_report': xpath_text('.//periodOfReport'),
+            'transaction_date': xpath_text('.//nonDerivativeTransaction/transactionDate/value')
         }
-    except ET.ParseError as e:
-        print(f"XML parsing error: {str(e)}")
+        
+    except Exception as e:
+        print(f"XML parsing failed: {str(e)}")
         return None
 
 def process_filings():
+    supabase = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+    
     feed = requests.get(
         "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=4&owner=only&count=100&output=atom",
         headers={"User-Agent": "Jackson Gray jacksongray23@gmail.com"}
@@ -33,37 +53,32 @@ def process_filings():
         txt_url = index_url.replace("-index.htm", ".txt")
         
         try:
-            # 1. Fetch filing
+            # Fetch filing
             response = requests.get(txt_url, headers={"User-Agent": "Jackson Gray jacksongray23@gmail.com"})
             filing_text = response.text
             
-            # 2. Quick J-code check
+            # Quick J-code check before parsing
             if '<transactionCode>J</transactionCode>' not in filing_text:
                 continue
                 
-            # 3. Extract XML data
-            xml_match = re.search(r'<XML>(.*?)</XML>', filing_text, re.DOTALL)
-            if not xml_match:
-                continue
-                
-            xml_data = extract_xml_data(xml_match.group(1))
+            # Extract data
+            xml_data = extract_xml_data(filing_text)
             if not xml_data:
                 continue
 
-            # 4. Prepare database fields
+            # Prepare database record
             accession_number = txt_url.split('/')[-1].replace('.txt', '')
-            rss_updated = entry.find('{http://www.w3.org/2005/Atom}updated').text
-            
-            supabase.table('j_code_filings').upsert({
+            record = {
                 'filing_id': accession_number,
-                'ticker': xml_data['ticker'],
-                'company_name': xml_data['issuer_name'],
-                'filing_date': rss_updated,  # From RSS <updated> field
-                'transaction_date': xml_data['period_of_report'],  # From XML periodOfReport
+                'ticker': xml_data['ticker'],  # NTHI from example
+                'company_name': xml_data['issuer_name'],  # "NEONC TECHNOLOGIES..."
+                'filing_date': entry.find('{http://www.w3.org/2005/Atom}updated').text,  # RSS timestamp
+                'transaction_date': xml_data['period_of_report'],  # 2025-03-26 from example
                 'filing_url': txt_url
-            }).execute()
+            }
             
-            print(f"Processed: {xml_data['issuer_name']} ({xml_data['ticker']}) | Filed: {rss_updated} | Period: {xml_data['period_of_report']}")
+            supabase.table('j_code_filings').upsert(record).execute()
+            print(f"Processed: {record['company_name']} ({record['ticker']})")
             
         except Exception as e:
             print(f"Error processing {txt_url}: {str(e)}")
