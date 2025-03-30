@@ -139,3 +139,17 @@ Common Issues:
 3. XML parsing errors:
 - Check last_parse_error.txt for problematic filings
 - Manually verify the SEC filing URL
+
+📜 License
+MIT License - See LICENSE for details.
+
+Note: This project is not affiliated with the SEC. Use compliance data responsibly.
+
+This README includes:
+
+1. **Project Metadata** - Badges and overview
+2. **Technical Specifications** - Stack table and architecture diagram
+3. **Setup Instructions** - Local and cloud deployment
+4. **Core Logic** - Key algorithms explained
+5. **Operational Details** - Schedule, schema, troubleshooting
+6. **Legal** - License disclaimer
