@@ -128,18 +128,6 @@ filing_date	TIMESTAMPTZ	When SEC received filing (ET)
 transaction_date	DATE	When trade occurred
 filing_url	VARCHAR(255)	Link to official XML filing
 
-📊 Example Output
-Filed Date (ET)	Trade Date	Symbol	Company	Filing
-2025-03-28 17:43:16	2025-03-26	NTHI	NEONC TECHNOLOGIES HOLDINGS, INC.	[View Filing]
-💾 Database Schema
-Column	Type	Description
-filing_id	VARCHAR(20)	SEC accession number (PK)
-ticker	VARCHAR(10)	Company stock symbol
-company_name	VARCHAR(255)	Legal issuer name
-filing_date	TIMESTAMPTZ	When SEC received filing (ET)
-transaction_date	DATE	When trade occurred
-filing_url	VARCHAR(255)	Link to official XML filing
-
 🚨 Troubleshooting
 Common Issues:
 1. Missing filings:
