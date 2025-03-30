@@ -3,41 +3,53 @@ import requests
 import xml.etree.ElementTree as ET
 from supabase import create_client
 import re
-from datetime import datetime
+from bs4 import BeautifulSoup  # HTML/XML cleanup
 
 def extract_xml_data(filing_text):
-    """Advanced XML parser with SEC-specific handling"""
+    """Ultra-reliable XML extraction with full J-code detection"""
     try:
-        # Isolate the XML section (handles malformed wrappers)
-        xml_start = filing_text.find('<ownershipDocument>')
-        xml_end = filing_text.find('</ownershipDocument>')
+        # 1. Isolate XML content using more flexible matching
+        xml_start = filing_text.find('<ownershipDocument')
+        xml_end = filing_text.rfind('</ownershipDocument>')
         
         if xml_start == -1 or xml_end == -1:
             return None
             
-        xml_content = filing_text[xml_start:xml_end+18]  # +18 for tag length
+        xml_content = filing_text[xml_start:xml_end+19]  # +19 for full closing tag
         
-        # Fix common XML issues
-        xml_content = re.sub(r'<\?xml[^>]+\?>', '', xml_content)  # Remove duplicate declarations
-        xml_content = re.sub(r'&(?!#?[a-z0-9]+;)', '&amp;', xml_content)  # Fix unescaped ampersands
+        # 2. Clean the XML before parsing
+        xml_content = re.sub(r'<\?xml[^>]+\?>', '', xml_content)  # Remove declarations
+        xml_content = re.sub(r'&(?!#?[a-z0-9]+;)', '&amp;', xml_content)  # Fix ampersands
         
-        # Parse with explicit encoding
-        root = ET.fromstring(xml_content.encode('utf-8'))
+        # 3. Parse with BeautifulSoup for fault tolerance
+        soup = BeautifulSoup(xml_content, 'lxml-xml')
         
-        # XPath helper with null checks
-        def xpath_text(path):
-            node = root.find(path)
-            return node.text if node is not None else None
+        # 4. Check for J-codes in ALL transaction types
+        j_code_found = False
+        for code in soup.find_all('transactionCode'):
+            if code.text.strip() == 'J':
+                j_code_found = True
+                break
+                
+        if not j_code_found:
+            return None
             
+        # 5. Extract data with fallbacks
+        issuer = soup.find('issuer')
         return {
-            'issuer_name': xpath_text('.//issuerName'),
-            'ticker': xpath_text('.//issuerTradingSymbol'),
-            'period_of_report': xpath_text('.//periodOfReport'),
-            'transaction_date': xpath_text('.//nonDerivativeTransaction/transactionDate/value')
+            'issuer_name': issuer.find('issuerName').text if issuer else None,
+            'ticker': issuer.find('issuerTradingSymbol').text if issuer else None,
+            'period_of_report': soup.find('periodOfReport').text if soup.find('periodOfReport') else None,
+            'transaction_date': (soup.find('transactionDate', {'value': True}) or 
+                               soup.find('deemedExecutionDate', {'value': True}) or 
+                               soup.find('periodOfReport')).text if soup.find('periodOfReport') else None
         }
         
     except Exception as e:
-        print(f"XML parsing failed: {str(e)}")
+        print(f"XML parsing error: {str(e)}")
+        # Save problematic filing for debugging
+        with open('last_failed_parse.txt', 'w') as f:
+            f.write(filing_text[xml_start-500:xml_end+500] if 'xml_start' in locals() else filing_text[:1000])
         return None
 
 def process_filings():
@@ -54,34 +66,30 @@ def process_filings():
         
         try:
             # Fetch filing
-            response = requests.get(txt_url, headers={"User-Agent": "Jackson Gray jacksongray23@gmail.com"})
+            response = requests.get(txt_url, headers={"User-Agent": "Jackson Gray jacksongray23@gmail.com"}, timeout=15)
             filing_text = response.text
             
-            # Quick J-code check before parsing
-            if '<transactionCode>J</transactionCode>' not in filing_text:
+            # Process XML
+            xml_data = extract_xml_data(filing_text)
+            if not xml_data:  # Either no J-code or parse failure
                 continue
                 
-            # Extract data
-            xml_data = extract_xml_data(filing_text)
-            if not xml_data:
-                continue
-
             # Prepare database record
             accession_number = txt_url.split('/')[-1].replace('.txt', '')
             record = {
                 'filing_id': accession_number,
-                'ticker': xml_data['ticker'],  # NTHI from example
-                'company_name': xml_data['issuer_name'],  # "NEONC TECHNOLOGIES..."
-                'filing_date': entry.find('{http://www.w3.org/2005/Atom}updated').text,  # RSS timestamp
-                'transaction_date': xml_data['period_of_report'],  # 2025-03-26 from example
+                'ticker': xml_data['ticker'],
+                'company_name': xml_data['issuer_name'],
+                'filing_date': entry.find('{http://www.w3.org/2005/Atom}updated').text,
+                'transaction_date': xml_data['period_of_report'],  # Using periodOfReport as requested
                 'filing_url': txt_url
             }
             
             supabase.table('j_code_filings').upsert(record).execute()
-            print(f"Processed: {record['company_name']} ({record['ticker']})")
+            print(f"✅ Processed: {record['company_name']} ({record['ticker']})")
             
         except Exception as e:
-            print(f"Error processing {txt_url}: {str(e)}")
+            print(f"❌ Failed {txt_url}: {str(e)}")
 
 if __name__ == '__main__':
     process_filings()
