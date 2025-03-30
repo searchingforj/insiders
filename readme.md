@@ -104,9 +104,9 @@ Key Components
 - Identifies J-codes in XML transactions
 - Upserts data to Supabase
 2. Dashboard (app.py):
--Displays filings in sortable table
--Shows filing vs transaction dates
--Provides direct SEC document links
+- Displays filings in sortable table
+- Shows filing vs transaction dates
+- Provides direct SEC document links
 3. Duplicate Prevention:
 ```python
 # Uses SEC accession number as primary key
