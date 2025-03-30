@@ -87,7 +87,7 @@ jobs:
 SUPABASE_URL = "your-supabase-url"
 SUPABASE_KEY = "your-anon-key"
 ```
-# 🔧 How It Works
+## 🔧 How It Works
 
 **Data Pipeline**
 ```mermaid
