@@ -44,7 +44,7 @@ pip install -r requirements.txt
 # Set up environment
 echo "SUPABASE_URL=your_project_url" > .env
 echo "SUPABASE_KEY=your_anon_key" >> .env
-
+'''
 ### 2. Database Configuration
 '''sql
 CREATE TABLE j_code_filings (
