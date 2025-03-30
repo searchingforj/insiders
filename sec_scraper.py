@@ -32,8 +32,10 @@ def process_filings():
         
         if check_filing(index_url):
             title = entry.find('{http://www.w3.org/2005/Atom}title').text
+            accession_number = index_url.split('/')[-2]  # Extract from URL path
+            
             supabase.table('j_code_filings').upsert({
-                'filing_id': entry.find('{http://www.w3.org/2005/Atom}id').text.split('/')[-1],
+                'filing_id': accession_number,  # Now using the clean accession number
                 'ticker': re.search(r'\((.*?)\)', title).group(1) if '(' in title else None,
                 'company_name': title.split(' - ')[0].split(' (')[0],
                 'filing_date': entry.find('{http://www.w3.org/2005/Atom}updated').text,
