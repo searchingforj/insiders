@@ -44,9 +44,9 @@ pip install -r requirements.txt
 # Set up environment
 echo "SUPABASE_URL=your_project_url" > .env
 echo "SUPABASE_KEY=your_anon_key" >> .env
-'''
+```
 ### 2. Database Configuration
-'''sql
+```sql
 CREATE TABLE j_code_filings (
     filing_id VARCHAR(20) PRIMARY KEY,
     ticker VARCHAR(10),
@@ -54,14 +54,14 @@ CREATE TABLE j_code_filings (
     filing_date TIMESTAMPTZ,
     transaction_date DATE,
     filing_url VARCHAR(255)
-);'''
+);
 
 CREATE INDEX idx_jcode_filings ON j_code_filings (filing_date DESC);
-
+```
 ### 3. Deployment
 # Scraper (GitHub Actions)
 - Create .github/workflows/scraper.yml
-'''yaml
+```yaml
 name: SEC Scraper
 on:
   schedule:
@@ -78,26 +78,26 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-'''
+```
 # Dashboard (Streamlit Cloud)
 - Connect your GitHub repo
 - Set secrets:
-'''toml
+```toml
 # .streamlit/secrets.toml
 SUPABASE_URL = "your-supabase-url"
 SUPABASE_KEY = "your-anon-key"
-'''
+```
 # 🔧 How It Works
 
 Data Pipeline
-'''mermaid
+```mermaid
 flowchart LR
     A[SEC RSS Feed] --> B(Scraper)
     B --> C{Contains J-code?}
     C -->|Yes| D[(Supabase)]
     C -->|No| E[Discard]
     D --> F[Dashboard]
-'''
+```
 Key Components
 1. Scraper (sec_scraper.py):
 - Pulls Form 4 filings from SEC RSS feed
@@ -108,13 +108,13 @@ Key Components
 -Shows filing vs transaction dates
 -Provides direct SEC document links
 3. Duplicate Prevention:
-'''python
+```python
 # Uses SEC accession number as primary key
 supabase.table('j_code_filings').upsert({
     'filing_id': '0001013762-25-004348',
     # ...other fields
 }).execute()
-'''
+```
 📊 Example Output
 Filed Date (ET)	Trade Date	Symbol	Company	Filing
 2025-03-28 17:43:16	2025-03-26	NTHI	NEONC TECHNOLOGIES HOLDINGS, INC.	[View Filing]
