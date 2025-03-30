@@ -59,7 +59,7 @@ CREATE TABLE j_code_filings (
 CREATE INDEX idx_jcode_filings ON j_code_filings (filing_date DESC);
 ```
 ### 3. Deployment
-# Scraper (GitHub Actions)
+**Scraper (GitHub Actions)**
 - Create .github/workflows/scraper.yml
 ```yaml
 name: SEC Scraper
@@ -79,7 +79,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 ```
-# Dashboard (Streamlit Cloud)
+**Dashboard (Streamlit Cloud)**
 - Connect your GitHub repo
 - Set secrets:
 ```toml
