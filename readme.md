@@ -98,7 +98,7 @@ flowchart LR
     C -->|No| E[Discard]
     D --> F[Dashboard]
 ```
-Key Components
+**Key Components**
 1. Scraper (sec_scraper.py):
 - Pulls Form 4 filings from SEC RSS feed
 - Identifies J-codes in XML transactions
@@ -133,19 +133,19 @@ supabase.table('j_code_filings').upsert({
 | transaction_date | DATE        | When trade occurred             |
 | filing_url       | VARCHAR(255)| Link to official XML filing     |
 
-🚨 Troubleshooting
+## 🚨 Troubleshooting
 Common Issues:
-1. Missing filings:
+1. **Missing filings:**
 - Verify SEC operating hours (6AM-10PM ET)
 - Check GitHub Actions logs
-2. Database connection fails:
+2. **Database connection fails:**
 - Confirm Supabase RLS (Row Level Security) is off
 - Validate secrets in both GitHub and Streamlit
-3. XML parsing errors:
+3. **XML parsing errors:**
 - Check last_parse_error.txt for problematic filings
 - Manually verify the SEC filing URL
 
-📜 License
+## 📜 License
 MIT License - See LICENSE for details.
 
 Note: This project is not affiliated with the SEC. Use compliance data responsibly.
