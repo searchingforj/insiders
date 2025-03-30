@@ -61,7 +61,7 @@ def process_filings():
                 'filing_date': rss_updated,  # From RSS <updated> field
                 'transaction_date': xml_data['period_of_report'],  # From XML periodOfReport
                 'filing_url': txt_url
-            })print(f"Would insert: {filing_data}")
+            }).execute()
             
             print(f"Processed: {xml_data['issuer_name']} ({xml_data['ticker']}) | Filed: {rss_updated} | Period: {xml_data['period_of_report']}")
             
