@@ -89,7 +89,7 @@ SUPABASE_KEY = "your-anon-key"
 ```
 # 🔧 How It Works
 
-Data Pipeline
+**Data Pipeline**
 ```mermaid
 flowchart LR
     A[SEC RSS Feed] --> B(Scraper)
