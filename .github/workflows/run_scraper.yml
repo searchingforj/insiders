@@ -1,9 +1,9 @@
 name: SEC Scraper
 on:
   schedule:
-    - cron: '*/10 6-22 * * 1-5'  # Every 10 minutes, 6AM-10PM EST Mon-Fri
+    - cron: '*/10 10-23 * * 1-5'  # 10 AM to 11 PM UTC
+    - cron: '*/10 0-2 * * 2-6'     # 12 AM to 2 AM UTC (next day)
   workflow_dispatch:  # Allow manual triggers
-
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
